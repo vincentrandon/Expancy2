@@ -2,8 +2,9 @@ from django.shortcuts import render
 
 # Create your views here.
 from django.urls import path, reverse_lazy
-from django.views.generic import TemplateView, CreateView, FormView
+from django.views.generic import TemplateView, CreateView, FormView, DetailView
 
+from accounts.models import User
 from tool.forms import CompareFormCommandes, CompareFormPartTwo
 
 
@@ -28,3 +29,13 @@ class FormColumnSelection(RequestFormMixin, FormView):
     template_name = 'tool/upload-columns-selection.html'
     form_class = CompareFormPartTwo
     success_url = reverse_lazy('tool:result')
+
+class UserDetailView(DetailView):
+
+    model = User
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['users'] = User.objects.all()
+
+        return context
