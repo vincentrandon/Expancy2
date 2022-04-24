@@ -1,0 +1,14 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<p>Veuillez choisir ci-dessous le transporteur concerné pour l'upload du fichier transporteur :</p>
+{% for supplement in supplements %}
+    <ul>
+    {% if supplement.brand %}
+        <li>{{ supplement.brand }} - {{ supplement.transporter }} </li>
+    {% else %}
+        <li><a href="{% url 'tool:tarifs' slug=supplement.slug %}">{{ supplement.transporter }}</a></li>
+    {% endif %}
+    </ul>
+{% endfor %}
+{% endblock content %}

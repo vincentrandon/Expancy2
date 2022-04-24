@@ -1,0 +1,11 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<p>Veuillez choisir ci-dessous entre l'édition des tarifs transporteur ou l'upload d'un fichier transporteur :</p>
+
+    <ul>
+        <li><a href="{% url 'tool:tarifs' slug=supplement.slug %}">Editer les tarifs</a></li>
+    </ul>
+
+
+{% endblock content %}

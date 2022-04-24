@@ -1,10 +1,10 @@
-from django.shortcuts import render
+from django.shortcuts import render, get_object_or_404
 
 # Create your views here.
 from django.urls import path, reverse_lazy
-from django.views.generic import TemplateView, CreateView, FormView, DetailView
+from django.views.generic import TemplateView, CreateView, FormView, DetailView, ListView, UpdateView
 
-from accounts.models import User
+from accounts.models import User, Supplement
 from tool.forms import CompareFormCommandes, CompareFormPartTwo
 
 
@@ -30,12 +30,32 @@ class FormColumnSelection(RequestFormMixin, FormView):
     form_class = CompareFormPartTwo
     success_url = reverse_lazy('tool:result')
 
-class UserDetailView(DetailView):
+class UserSupplementView(TemplateView):
 
     model = User
+    template_name = 'tool/transporters.html'
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['users'] = User.objects.all()
-
+        user = self.request.user
+        context['supplements'] = user.company.supplement_set.all()
+        print(context['supplements'])
         return context
+
+class UserSupplementTransporterView(TemplateView):
+    model = Supplement
+    template_name = 'tool/transporter-detail.html'
+    context_object_name = "tarifs"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        slug = self.kwargs['slug']
+        context['supplement'] = get_object_or_404(Supplement, slug=slug)
+        return context
+
+class UserSupplementTransporterEditView(UpdateView):
+    model = Supplement
+    template_name = 'tool/transporter-detail.html'
+    context_object_name = "edit-tarifs"
+
+
