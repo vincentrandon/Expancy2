@@ -4,7 +4,8 @@
 <p>Veuillez choisir ci-dessous entre l'édition des tarifs transporteur ou l'upload d'un fichier transporteur :</p>
 
     <ul>
-        <li><a href="{% url 'tool:tarifs' slug=supplement.slug %}">Editer les tarifs</a></li>
+        <li><a href="{% url 'tool:edit-tarifs' slug=supplement.slug %}">Editer les tarifs</a></li>
+        <li><a href="{% url 'tool:upload-fichier-transporteur' %}">Uploader un fichier</a></li>
     </ul>
 
 

@@ -7,8 +7,10 @@ from tool.helpers import parse_excel, parse_csv, parse_xml
 from tool.models import CheckFile
 
 
-class CompareFormCommandes(forms.ModelForm):
+class CompareFormTransporteur(forms.ModelForm):
     file = forms.FileField(label="Fichier CSV", required=True)
+    header_row = forms.IntegerField(label="Header row", required=True)
+
 
     class Meta:
         model = CheckFile
@@ -17,6 +19,8 @@ class CompareFormCommandes(forms.ModelForm):
     def __init__(self, request, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.request = request
+        if self.instance:
+            self.initial['header_row'] = "1"
 
     def clean(self):
         super().clean()

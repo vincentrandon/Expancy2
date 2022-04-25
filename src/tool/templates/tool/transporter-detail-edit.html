@@ -1,11 +1,14 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<p>Veuillez choisir ci-dessous entre l'édition des tarifs transporteur ou l'upload d'un fichier transporteur :</p>
+<p>Vous pouvez, si vous le souhaitez modifier les tarifs de ce transporteur :</p>
 
-    <ul>
-        <li><a href="{% url 'tool:tarifs' slug=supplement.slug %}">Editer les tarifs</a></li>
-    </ul>
+    <h1> Editer </h1>
 
+    <form method="POST">
+        {% csrf_token %}
+        {{ form.as_p }}
+    <input type="submit" value="Editer">
+    </form>
 
 {% endblock content %}
