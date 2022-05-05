@@ -2,8 +2,12 @@ from django.contrib import admin
 
 # Register your models here.
 from django.utils.html import format_html
+from import_export import resources
+from import_export.admin import ImportMixin
+from nested_admin.nested import NestedStackedInline, NestedModelAdmin, NestedTabularInline
 
-from accounts.models import Transporter, User, Supplement, Company, Brand
+from accounts.forms import CustomImportForm, CustomConfirmImportForm
+from accounts.models import Transporter, User, Supplement, Company, Brand, Weight, WeightPrices
 
 
 class CustomTransporterAdmin(admin.ModelAdmin):
@@ -13,11 +17,7 @@ class CustomTransporterAdmin(admin.ModelAdmin):
 
 admin.site.register(Transporter, CustomTransporterAdmin)
 
-class CustomCustomerAdmin(admin.ModelAdmin):
-    list_display = ['name']
-    model = Company
-
-admin.site.register(Company, CustomCustomerAdmin)
+''' USERS '''
 
 class CustomUserAdmin(admin.ModelAdmin):
 
@@ -30,17 +30,46 @@ class CustomUserAdmin(admin.ModelAdmin):
 
 admin.site.register(User, CustomUserAdmin)
 
-class CustomSupplementAdmin(admin.ModelAdmin):
+
+''' COMPANIES '''
+class CustomCustomerAdmin(admin.ModelAdmin):
+    list_display = ['name']
+    model = Company
+
+admin.site.register(Company, CustomCustomerAdmin)
+
+
+''' SUPPLEMENTS '''
+
+class CustomSupplementAdmin(ImportMixin, admin.ModelAdmin):
 
     list_display = ['company', 'transporter']
     list_filter = ['company']
     model = Supplement
 
+    def get_import_form(self):
+        return CustomImportForm
+
+    def get_confirm_import_form(self):
+        return CustomConfirmImportForm
+
+    def get_form_kwargs(self, form, *args, **kwargs):
+        # pass on `author` to the kwargs for the custom confirm form
+        if isinstance(form, CustomImportForm):
+            if form.is_valid():
+                Supplement = form.cleaned_data['Supplement']
+                kwargs.update({'Supplement': Supplement.id})
+        return kwargs
+
+
 admin.site.register(Supplement, CustomSupplementAdmin)
 
 
 
-#Marques
+
+
+
+''' BRANDS '''
 
 class CustomBrandAdmin(admin.ModelAdmin):
 
@@ -49,3 +78,19 @@ class CustomBrandAdmin(admin.ModelAdmin):
     model = Brand
 
 admin.site.register(Brand, CustomBrandAdmin)
+
+
+''' WEIGHTS '''
+
+class AdminWeightPrices(NestedTabularInline):
+    model = WeightPrices
+
+
+class CustomWeightAdmin(NestedModelAdmin):
+
+    list_display = ['company', 'transporter']
+    list_filter = ['company']
+    model = Weight
+    inlines = [AdminWeightPrices]
+
+admin.site.register(Weight, CustomWeightAdmin)

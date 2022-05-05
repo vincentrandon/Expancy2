@@ -1,4 +1,7 @@
+import pandas as pd
+from django.http import HttpResponse, JsonResponse
 from django.shortcuts import render, get_object_or_404
+from pprint import pprint
 
 # Create your views here.
 from django.urls import path, reverse_lazy, reverse
@@ -6,6 +9,8 @@ from django.views.generic import TemplateView, CreateView, FormView, DetailView,
 
 from accounts.models import User, Supplement
 from tool.forms import CompareFormPartTwo, CompareFormTransporteur
+import json
+
 
 
 class RequestFormMixin:
@@ -15,6 +20,13 @@ class RequestFormMixin:
         kwargs = super().get_form_kwargs()
         kwargs["request"] = self.request
         return kwargs
+
+
+
+'''
+TRANSPORTER FORM
+View to select columns to be compared. 
+'''
 
 class FormCompareTransporteur(RequestFormMixin, CreateView):
     """Implémente la première étape : le téléchargement du fichier."""
@@ -29,6 +41,12 @@ class FormColumnSelection(RequestFormMixin, FormView):
     template_name = 'tool/upload-columns-selection.html'
     form_class = CompareFormPartTwo
     success_url = reverse_lazy('tool:result')
+
+
+'''
+TRANSPORTERS:
+View to see the list of transporters affected to one user.
+'''
 
 class UserSupplementView(TemplateView):
 
@@ -47,11 +65,27 @@ class UserSupplementTransporterView(TemplateView):
     template_name = 'tool/transporter-detail.html'
     context_object_name = "tarifs"
 
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         slug = self.kwargs['slug']
         context['supplement'] = get_object_or_404(Supplement, slug=slug)
         return context
+
+    def get_form_kwargs(self):
+        kwargs = super(UserSupplementTransporterView, self).get_form_kwargs()
+        slug = self.kwargs['slug']
+        kwargs['header'] = get_object_or_404(Supplement, slug=slug).header_row
+        return kwargs
+
+
+
+
+
+'''
+TRANSPORTER:
+View to edit pricings of transporter.
+'''
 
 class UserSupplementTransporterEditView(UpdateView):
     model = Supplement
@@ -67,6 +101,43 @@ class UserSupplementTransporterEditView(UpdateView):
 
     def get_success_url(self):
         return reverse('tool:tarifs', kwargs={'slug' : self.object.slug})
+
+
+'''
+Webpage result:
+'''
+
+class ResultView(TemplateView):
+    template_name = 'tool/result.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['uploaded'] = self.request.session['uploaded']
+        context['selection'] = self.request.session['selection']
+        context['profile'] = self.request.session['profile']
+        dict_comparaison_p1 = dict(enumerate(context['uploaded'].items()))
+        list_comparaison_p2 = context['selection']
+        dict_comparaison_p2 = {number: dict_comparaison_p1[number] for number in list_comparaison_p2}
+        d_col = {}
+        df = pd.DataFrame()
+        for idx, (k, v) in enumerate(dict_comparaison_p2.items()):
+            d_col[k] = v[0]
+            # print(d_col[k])
+            df = df.append(pd.DataFrame(data=v[1], index=[idx]))
+
+        d_col2 = {i: v for i, v in enumerate(d_col.values())}
+        df = df.T.rename(columns=d_col2)
+        print(df)
+
+        ''' Rework du dataframe '''
+        #Rework columns
+        df = df.columns.map(lambda x: x.strip())
+        #Withdrawing 5 last rows
+        df = df[:-5]
+
+
+        return context
+
 
 
 

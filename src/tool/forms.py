@@ -8,7 +8,7 @@ from tool.models import CheckFile
 
 
 class CompareFormTransporteur(forms.ModelForm):
-    file = forms.FileField(label="Fichier CSV", required=True)
+    file = forms.FileField(label="Fichier (CSV, XLSX, XML) ", required=True)
     header_row = forms.IntegerField(label="Header row", required=True)
 
 
@@ -19,15 +19,16 @@ class CompareFormTransporteur(forms.ModelForm):
     def __init__(self, request, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.request = request
-        if self.instance:
-            self.initial['header_row'] = "1"
+        self.request.session['header_row'] = self['header_row'].value()
+        super().__init__(*args, **kwargs)
 
     def clean(self):
         super().clean()
         extension = os.path.splitext(self.request.FILES['file'].name)[1]
-        print(extension)
+        integer = self.request.session['header_row']
+        print(integer)
         if extension in ['.xlsx', '.xls']:
-            uploaded = parse_excel(self.request.FILES['file'])
+            uploaded = parse_excel(self.request.FILES['file'], rowheader=2)
         elif extension == ".csv":
             uploaded = parse_csv(self.request.FILES['file'])
         elif extension == ".xml":
@@ -52,12 +53,10 @@ class CompareFormPartTwo(forms.Form):
     def clean_columns(self):
         """Valide les données sur les columns et transforme les choix en int."""
         columns = self.cleaned_data['columns']
-        print(columns)
 
         return [int(column) for column in columns]
 
     def clean(self):
         super().clean()
-        print(self.cleaned_data['columns'])
         self.request.session['selection'] = self.cleaned_data.get('columns')
         print(self.request.session['selection'])

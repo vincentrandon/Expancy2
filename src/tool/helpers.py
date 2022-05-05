@@ -1,12 +1,13 @@
 import os
 import pandas as pd
 from django.core.exceptions import ValidationError
+from django.http import JsonResponse
 
 
 def validate_file_extension(value):
     ext = os.path.splitext(value.name)[1]
     valid_extensions = ['.xls', '.xlsx', '.csv', '.xml']
-    if not ext in valid_extensions:
+    if ext not in valid_extensions:
         raise ValidationError(u'Ce type de fichier n\'est pas supporté !')
 
 def parse_csv(file):
@@ -16,10 +17,11 @@ def parse_csv(file):
 
     return df.to_dict()
 
-def parse_excel(file):
+def parse_excel(file, rowheader):
     """Parses the xls/xlsx file and return a dictionary representation of its
     content."""
-    df = pd.read_excel(file, skiprows=2)
+
+    df = pd.read_excel(file, skiprows=rowheader)
 
     return df.to_dict()
 
