@@ -112,6 +112,7 @@ class ResultView(TemplateView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        user = self.request.user
         context['uploaded'] = self.request.session['uploaded']
         context['selection'] = self.request.session['selection']
         context['profile'] = self.request.session['profile']
@@ -128,13 +129,20 @@ class ResultView(TemplateView):
         d_col2 = {i: v for i, v in enumerate(d_col.values())}
         df = df.T.rename(columns=d_col2)
         print(df)
-
         ''' Rework du dataframe '''
         #Rework columns
-        df = df.columns.map(lambda x: x.strip())
+        df.columns = df.columns.map(lambda x: x.strip())
         #Withdrawing 5 last rows
         df = df[:-5]
+        #Replacing "," by "." to get actual integers
+        df['Montant HT'] = df['Montant HT'].replace({",": "."})
+        #Grouping sums
+        df = df.groupby(['Numero LT'], as_index=False).agg(
+            {'Montant HT': 'sum', 'Type prestation': 'first'})
+        print(df)
 
+        context['poids'] = user.company.weight.weight
+        print(context['poids'])
 
         return context
 

@@ -3,7 +3,7 @@ from django.contrib import admin
 # Register your models here.
 from django.utils.html import format_html
 from import_export import resources
-from import_export.admin import ImportMixin
+from import_export.admin import ImportMixin, ImportExportModelAdmin
 from nested_admin.nested import NestedStackedInline, NestedModelAdmin, NestedTabularInline
 
 from accounts.forms import CustomImportForm, CustomConfirmImportForm
@@ -41,7 +41,7 @@ admin.site.register(Company, CustomCustomerAdmin)
 
 ''' SUPPLEMENTS '''
 
-class CustomSupplementAdmin(ImportMixin, admin.ModelAdmin):
+class CustomSupplementAdmin(ImportExportModelAdmin, admin.ModelAdmin):
 
     list_display = ['company', 'transporter']
     list_filter = ['company']
@@ -53,13 +53,13 @@ class CustomSupplementAdmin(ImportMixin, admin.ModelAdmin):
     def get_confirm_import_form(self):
         return CustomConfirmImportForm
 
-    def get_form_kwargs(self, form, *args, **kwargs):
-        # pass on `author` to the kwargs for the custom confirm form
-        if isinstance(form, CustomImportForm):
-            if form.is_valid():
-                Supplement = form.cleaned_data['Supplement']
-                kwargs.update({'Supplement': Supplement.id})
-        return kwargs
+    # def get_form_kwargs(self, form, *args, **kwargs):
+    #     # pass on `author` to the kwargs for the custom confirm form
+    #     if isinstance(form, CustomImportForm):
+    #         if form.is_valid():
+    #             Supplement = form.cleaned_data['Supplement']
+    #             kwargs.update({'Supplement': Supplement.id})
+    #     return kwargs
 
 
 admin.site.register(Supplement, CustomSupplementAdmin)

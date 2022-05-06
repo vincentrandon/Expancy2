@@ -116,7 +116,7 @@ class Supplement(models.Model):
     transporter = models.ForeignKey(Transporter, on_delete=DO_NOTHING, blank=True, null=True)
     company = models.ForeignKey(Company, on_delete=DO_NOTHING, blank=True, null=True)
     brand = models.ForeignKey(Brand, on_delete=DO_NOTHING, blank=True, null=True)
-    header_row = models.IntegerField(blank=True)
+    header_row = models.IntegerField(blank=True, null=True)
     supplement_annonce_incomplete = models.DecimalField('Supplément annonce incomplète', max_digits=7, decimal_places=3,
                                                         blank=True, null=True)
     supplement_retour_expediteur = models.DecimalField('Supplément Retour Expéditeur', max_digits=7, decimal_places=3,
@@ -164,6 +164,14 @@ class Supplement(models.Model):
             else:
                 self.slug = slugify(str("tarifs-") + str(self.company) + "-" + str(self.transporter))
 
+        elif 'none' in self.slug:
+            if self.brand:
+                self.slug = slugify(
+                    str("tarifs-") + str(self.company) + "-" + str(self.brand) + "-" + str(self.transporter))
+            else:
+                self.slug = slugify(str("tarifs-") + str(self.company) + "-" + str(self.transporter))
+
+
         super().save(*args, **kwargs)
 
     class Meta:
@@ -189,7 +197,7 @@ class Weight(models.Model):
         verbose_name_plural = "Weights"
 
 class WeightPrices(models.Model):
-    profile_weight = models.ForeignKey(Weight, on_delete=DO_NOTHING, blank=False, null=True)
+    weight = models.ForeignKey(Weight, on_delete=DO_NOTHING, blank=False, null=True)
     min_weight = models.FloatField('Min weight', blank=False, null=True)
     max_weight = models.FloatField('Max weight', blank=False, null=True)
     price = models.FloatField('Price', blank=False, null=True)
