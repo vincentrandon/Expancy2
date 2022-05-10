@@ -7,17 +7,20 @@ from django.db import models
 
 # Create your models here.
 
-########################################
-# Classe dédiée au modèle utilisateurs
-########################################
+
 from django.db.models import DO_NOTHING, JSONField
 from django.template.defaultfilters import slugify
 from django.urls import reverse
 from django.utils.safestring import mark_safe
 from django_extensions.db.fields import AutoSlugField
+from multiselectfield import MultiSelectField
 
 from tool.models import CheckFile
 
+
+########################################
+# Classe dédiée au modèle utilisateurs
+########################################
 
 class User(AbstractBaseUser, PermissionsMixin):
     username = models.CharField('username', max_length=30, blank=True)
@@ -112,7 +115,37 @@ class Brand(models.Model):
         verbose_name_plural = "Brands"
 
 
+
 class Supplement(models.Model):
+
+    PROFILE_CHOICES_CHRONOPOST = [
+        (1, 'No Facture'),
+        (2, 'Sous-compte'),
+        (3, 'Date LT'),
+        (4, 'Code postal depart'),
+        (5, 'Code postal arrivee'),
+        (6, 'Pays depart'),
+        (7, 'Pays arrivee'),
+        (8, 'Ref Destinataire'),
+        (9, 'Ref Expediteur'),
+        (10, 'No Groupage tarifaire'),
+        (11, 'Numero LT'),
+        (12, 'Groupage'),
+        (13, 'Type prestation'),
+        (14, 'TVA'),
+        (15, 'Observations'),
+        (16, 'Zone Tarifaire'),
+        (17, 'Poids'),
+        (18, 'Produit'),
+        (19, 'Montant HT'),
+        (20, 'Raison sociale'),
+        (21, 'Raison sociale 2'),
+    ]
+
+    PROFILE_CHOICES_DPD = [
+        (1, 'Coucou'),
+    ]
+
     transporter = models.ForeignKey(Transporter, on_delete=DO_NOTHING, blank=True, null=True)
     company = models.ForeignKey(Company, on_delete=DO_NOTHING, blank=True, null=True)
     brand = models.ForeignKey(Brand, on_delete=DO_NOTHING, blank=True, null=True)
@@ -145,16 +178,24 @@ class Supplement(models.Model):
     supplement_taxe_carbone = models.DecimalField('Supplément taxe carbone', max_digits=7, decimal_places=3, blank=True,
                                                   null=True)
     slug = models.SlugField(max_length=255, unique=True, blank=True)
-    files = models.ManyToManyField(CheckFile, blank=True)
+    columns_to_keep = MultiSelectField(choices=PROFILE_CHOICES_CHRONOPOST, blank=True, null=True)
 
+
+    #Titre de la page
     def __str__(self):
         if self.brand:
             return "[" + str(self.company) + " - " + str(self.brand) + "] " + str(self.transporter)
         else:
             return "[" + str(self.company) + "] " + str(self.transporter)
 
+    #URL du supplément créé
     def get_absolute_url(self):
         return reverse("transporter-detail", kwargs={"slug": self.slug})
+
+    # def __init__(self, *args, **kwargs):
+    #     super().__init__(*args, **kwargs)
+    #     if self:
+    #         print(self.columns_to_keep)
 
     def save(self, *args, **kwargs):
         if not self.slug:

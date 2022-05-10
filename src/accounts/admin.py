@@ -46,6 +46,7 @@ class CustomSupplementAdmin(ImportExportModelAdmin, admin.ModelAdmin):
     list_display = ['company', 'transporter']
     list_filter = ['company']
     model = Supplement
+    # form = ColumnsForm
 
     def get_import_form(self):
         return CustomImportForm

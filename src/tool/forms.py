@@ -1,62 +1,47 @@
 import os
 from pprint import pprint
 
+import pandas as pd
 from django import forms
 
-from tool.helpers import parse_excel, parse_csv, parse_xml
+from accounts.models import Transporter, Supplement
+from tool.helpers import parse_excel, parse_csv, parse_xml, validate_file_extension
 from tool.models import CheckFile
 
 
-class CompareFormTransporteur(forms.ModelForm):
-    file = forms.FileField(label="Fichier (CSV, XLSX, XML) ", required=True)
-    header_row = forms.IntegerField(label="Header row", required=True)
-
+class CompareFormTransporterCompany(forms.ModelForm):
+    file = forms.FileField(label="File (CSV, XLSX, XML) ")
+    name_transporter = forms.ModelChoiceField(label='Choose transporter', queryset=Transporter.objects.all())
 
     class Meta:
         model = CheckFile
         fields = ['file',]
 
+
     def __init__(self, request, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.request = request
-        self.request.session['header_row'] = self['header_row'].value()
-        super().__init__(*args, **kwargs)
+        user = self.request.user
+        print(user)
 
     def clean(self):
         super().clean()
-        extension = os.path.splitext(self.request.FILES['file'].name)[1]
-        integer = self.request.session['header_row']
-        print(integer)
-        if extension in ['.xlsx', '.xls']:
-            uploaded = parse_excel(self.request.FILES['file'], rowheader=2)
-        elif extension == ".csv":
-            uploaded = parse_csv(self.request.FILES['file'])
-        elif extension == ".xml":
-            uploaded = parse_xml(self.request.FILES['file'])
-
+        user = self.request.user
+        company = user.company
+        transporter = self.cleaned_data.get('name_transporter')
+        supplement = Supplement.objects.get(company=company, transporter=transporter)
+        rowheader = supplement.header_row
+        columns_to_keep = str(supplement.columns_to_keep)
+        columns_to_keep = columns_to_keep.split(",")
+        columns_to_keep = [x.strip(' ') for x in columns_to_keep]
+        uploaded = parse_excel(self.request.FILES['file'], rowheader=rowheader)
         self.request.session['uploaded'] = uploaded
-        self.request.session['profile'] = self.cleaned_data.get('profile')
 
-class CompareFormPartTwo(forms.Form):
-    columns = forms.MultipleChoiceField(label="Colonnes", widget=forms.CheckboxSelectMultiple())
+        df = pd.DataFrame.from_dict(uploaded)
+        cols = [col for col in df.columns if col in columns_to_keep]
+        df = df[cols]
+        pprint(df)
 
-    def __init__(self, request, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.request = request
-        self.uploaded = request.session['uploaded']
-        columns_choices = []
-        for key in enumerate(self.uploaded):
-            columns_choices.append(key)
 
-        self.fields['columns'].choices = columns_choices
 
-    def clean_columns(self):
-        """Valide les données sur les columns et transforme les choix en int."""
-        columns = self.cleaned_data['columns']
 
-        return [int(column) for column in columns]
-
-    def clean(self):
-        super().clean()
-        self.request.session['selection'] = self.cleaned_data.get('columns')
-        print(self.request.session['selection'])

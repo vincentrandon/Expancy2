@@ -2,8 +2,39 @@
 
 {% block content %}
 <p>Veuillez choisir ci-dessous entre l'upload d'un fichier de commandes ou l'upload d'un fichier fournisseur :</p>
-<ul>
-    <li><a href="{% url 'tool:upload-fichier-commandes' %}">Uploader un fichier de commandes</a></li>
-    <li>Uploader un fichier transporteur</li>
-</ul>
+<h2>Upload fichier <u>transporteur</u></h2>
+    <form method="POST" enctype="multipart/form-data">
+        {% csrf_token %}
+{#        Partie transporteur#}
+        <h3>Partie transporteur</h3>
+        <div class="fieldWrapper">
+        {{ form.file.errors }}
+            <p><b><label>Uploader le fichier transporteur</label></b></p>
+        {{ form.file }}
+        </div>
+        <div class="fieldWrapper">
+        {{ form.name_transporter.errors }}
+            <p><b><label>Choisir le transporteur</label></b></p>
+        {{ form.name_transporter }}
+        </div>
+
+
+{#        Partie fichier des commandes#}
+{#        <h3>Partie fichier des commandes</h3>#}
+{#                <div class="fieldWrapper">#}
+{#        {{ form.file_company.errors }}#}
+{#            <p><b><label>Uploader le fichier des commandes</label></b></p>#}
+{#        {{ form.file_company }}#}
+{#        </div>#}
+{#        <div class="fieldWrapper">#}
+{#        {{ form.name_transporter2.errors }}#}
+{#            <p><b><label>Choisir le transporteur</label></b></p>#}
+{#        {{ form.name_transporter2 }}#}
+{#        </div>#}
+        <br>
+
+
+        <p><input type="submit" value="Editer"></p>
+    </form>
+
 {% endblock content %}

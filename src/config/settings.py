@@ -43,6 +43,7 @@ INSTALLED_APPS = [
     'nested_inline',
     'nested_admin',
     'import_export',
+    'multiselectfield',
 ]
 
 MIDDLEWARE = [

@@ -1,4 +1,5 @@
 from django import forms
+from django.forms import ModelForm
 from import_export.forms import ImportForm, ConfirmImportForm
 
 from accounts.models import Supplement, User
@@ -20,3 +21,6 @@ class CustomConfirmImportForm(ConfirmImportForm):
 
     def __str__(self):
         return User.first_name
+
+
+''''''
