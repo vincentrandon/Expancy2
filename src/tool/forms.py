@@ -180,7 +180,7 @@ class CompareFormTransporterCompany(forms.ModelForm):
         '''
 
         df5['IsSimilar'] = np.where(df5['Montant_HT'] == df5['Result'], True, False)
-        pprint(df5)
+
 
 
 
