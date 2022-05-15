@@ -3,15 +3,22 @@
 <head>
     <meta charset="UTF-8">
     <title>{% block title %} Expancy {% endblock title %}</title>
+      <script src="https://unpkg.com/htmx.org@1.7.0"></script>
 </head>
 <nav>
     <ul>
         <li><a href="{% url 'tool:home' %}">Home</a></li>
-        <li><a href="{% url 'tool:upload' %}">Upload</a></li>
-        <li><a href="{% url 'tool:transporters' %}">Transporteurs</a></li>
+
+        {% if user.is_authenticated %}
+        <li><a href="{% url 'tool:reports' %}">Reports</a></li>
+        <li><a href="{% url 'tool:add-report' %}">Create report</a></li>
+        <li><a href="{% url 'tool:transporters' %}">Transporters</a></li>
     </ul>
+        {%  endif %}
 </nav>
 <body>
+   {%block scripts%}
+   {%endblock scripts%}
     {% block content %}
     {% endblock %}
 </body>

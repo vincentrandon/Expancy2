@@ -7,7 +7,7 @@ from import_export.admin import ImportMixin, ImportExportModelAdmin
 from nested_admin.nested import NestedStackedInline, NestedModelAdmin, NestedTabularInline
 
 from accounts.forms import CustomImportForm, CustomConfirmImportForm
-from accounts.models import Transporter, User, Supplement, Company, Brand, Weight, WeightPrices
+from accounts.models import Transporter, User, Supplement, Company, Brand, Weight, WeightPrices, Report
 
 
 class CustomTransporterAdmin(admin.ModelAdmin):
@@ -95,3 +95,13 @@ class CustomWeightAdmin(NestedModelAdmin):
     inlines = [AdminWeightPrices]
 
 admin.site.register(Weight, CustomWeightAdmin)
+
+
+''' REPORT '''
+class CustomReportAdmin(admin.ModelAdmin):
+
+    list_display = ['title', 'company']
+    list_filter = ['company']
+    model = Report
+
+admin.site.register(Report, CustomReportAdmin)

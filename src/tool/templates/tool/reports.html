@@ -1,0 +1,15 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+    <h1><p>Liste des rapports</p></h1>
+
+
+    <p>Voici la liste des rapports : </p>
+    {% for report in reports %}
+        <ul>
+        <li><a href={% url 'tool:single-report' slug=report.slug %}>{{ report.title }}</a></li>
+        </ul>
+    {% endfor %}
+
+{% endblock content %}

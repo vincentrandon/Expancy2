@@ -1,3 +1,4 @@
+import pandas as pd
 from django.conf import settings
 from django.contrib.auth.base_user import AbstractBaseUser
 from django.contrib.auth.models import PermissionsMixin, UserManager
@@ -11,11 +12,10 @@ from django.db import models
 from django.db.models import DO_NOTHING, JSONField
 from django.template.defaultfilters import slugify
 from django.urls import reverse
+from django.utils.crypto import get_random_string
 from django.utils.safestring import mark_safe
 from django_extensions.db.fields import AutoSlugField
 from multiselectfield import MultiSelectField
-
-from tool.models import CheckFile
 
 
 ########################################
@@ -246,3 +246,22 @@ class WeightPrices(models.Model):
     class Meta:
         verbose_name = "Weight Price"
         verbose_name_plural = "Weight Prices"
+
+
+class Report(models.Model):
+    title = models.CharField(max_length=200, null=True, blank=True)
+    company = models.ForeignKey(Company, on_delete=models.CASCADE, blank=True, null=True)
+    brand = models.ForeignKey(Brand, on_delete=models.CASCADE, blank=True, null=True)
+    result = JSONField(null=True, blank=True)
+    slug = models.SlugField(max_length=255, blank=True)
+
+    def __str__(self):
+        return self.title
+
+
+
+    class Meta:
+        verbose_name = "Report"
+        verbose_name_plural = "Reports"
+
+

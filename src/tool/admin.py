@@ -5,7 +5,7 @@ from tool.models import CheckFile
 
 
 class CustomFileAdmin(admin.ModelAdmin):
-    list_display = ['name', 'month', 'timestamp', 'file',]
+    list_display = ['name_transporter']
     model = CheckFile
 
 admin.site.register(CheckFile, CustomFileAdmin)

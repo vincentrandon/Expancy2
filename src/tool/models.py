@@ -1,6 +1,7 @@
 from django.db import models
 
 # Create your models here.
+from accounts.models import Transporter, Company
 from tool.helpers import validate_file_extension
 
 PROFILE_CHOICES = [
@@ -9,14 +10,14 @@ PROFILE_CHOICES = [
 ]
 
 class CheckFile(models.Model):
-    name = models.CharField(max_length=200, blank=True)
-    month = models.DateField(blank=True, null=True)
-    timestamp = models.DateTimeField(blank=True, null=True)
-    profile = models.CharField('Choix du profil', blank=False, choices=PROFILE_CHOICES, max_length=100, default="Client")
-    file = models.FileField(blank=True, null=True, upload_to="uploads/", validators=[validate_file_extension])
+    company = models.ForeignKey(Company, on_delete=models.CASCADE, blank=True, null=True)
+    file_transporter = models.FileField('Insertion fichier transporteur', null=True)
+    name_transporter = models.ForeignKey(Transporter, on_delete=models.CASCADE, blank=True, null=True)
+    company_file = models.FileField('Insertion fichier transporteur', null=True)
+
 
     def __str__(self):
-        return self.name
+        return self.name_transporter
 
     class Meta:
         verbose_name = "file"

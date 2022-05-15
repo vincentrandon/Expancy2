@@ -1,6 +1,10 @@
 {% extends 'base.html' %}
+{% block scripts %}
+
+{% endblock scripts %}
 
 {% block content %}
+
     <p>Voici un exemple de réponse </p>
     <p>Sur un total de <b>{{ nb_rows }}</b> commandes, vous avez <b><u>{{ nb_errors }}</u></b> colis qui font l'objet d'une erreur.</p>
     <ul>
@@ -10,6 +14,11 @@
     </ul>
 
     <p><a href="{% url 'tool:download' %}">Télécharger le rapport</a></p>
+
+    {% for names, numbers in data_dict.items %}
+        {{ numbers }}
+    {% endfor %}
+
 
 
 

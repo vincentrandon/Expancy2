@@ -1,9 +1,14 @@
 {% extends 'base.html' %}
 
+
 {% block content %}
 <p>Veuillez choisir ci-dessous entre l'upload d'un fichier de commandes ou l'upload d'un fichier fournisseur :</p>
 <h2>Upload fichier <u>transporteur</u></h2>
-    <form method="POST" enctype="multipart/form-data">
+
+
+
+
+    <form method="POST" enctype="multipart/form-data" hx-post='.'>
         {% csrf_token %}
 {#        Partie transporteur#}
         <h3>Partie transporteur</h3>
@@ -30,7 +35,7 @@
         <br>
 
 
-        <p><input type="submit" value="Editer"></p>
+        <p><input type="submit" value="Procéder à la comparaison"></p>
     </form>
 
 {% endblock content %}
