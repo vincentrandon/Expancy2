@@ -1,11 +1,19 @@
 from django.contrib import admin
 
 # Register your models here.
-from tool.models import CheckFile
+from tool.models import TransporterFile, CompanyFile
 
 
-class CustomFileAdmin(admin.ModelAdmin):
-    list_display = ['name_transporter']
-    model = CheckFile
+class CustomTransporterFileAdmin(admin.ModelAdmin):
 
-admin.site.register(CheckFile, CustomFileAdmin)
+    list_display = ['transporter']
+    model = TransporterFile
+
+admin.site.register(TransporterFile, CustomTransporterFileAdmin)
+
+class CustomCompanyFileAdmin(admin.ModelAdmin):
+
+    list_display = ['company']
+    model = CompanyFile
+
+admin.site.register(CompanyFile, CustomCompanyFileAdmin)

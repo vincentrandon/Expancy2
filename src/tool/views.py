@@ -1,3 +1,4 @@
+import os
 from io import BytesIO
 import time
 import numpy as np
@@ -7,7 +8,7 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.http import HttpResponse, JsonResponse
-from django.shortcuts import render, get_object_or_404
+from django.shortcuts import render, get_object_or_404, redirect
 from pprint import pprint
 
 from django.template.defaultfilters import slugify
@@ -15,17 +16,20 @@ import plotly.graph_objects as go
 from django.urls import path, reverse_lazy, reverse
 from django.utils.crypto import get_random_string
 from django.utils.decorators import method_decorator
-from django.views.generic import TemplateView, CreateView, FormView, DetailView, ListView, UpdateView
+from django.views import View
+from django.views.generic import TemplateView, CreateView, FormView, DetailView, ListView, UpdateView, DeleteView
 from django_pandas.io import read_frame
 
 from accounts.models import User, Supplement, Weight, WeightPrices, Report
-from tool.forms import CompareFormTransporterCompany, ReportForm
+from tool.forms import ReportForm, TransporterFileForm
 import json
 
-from tool.models import CheckFile
+from tool.helpers import parse_data
+from tool.models import TransporterFile
 
 pd.set_option('display.width', 400)
 pd.set_option('display.max_columns', 15)
+
 
 class RequestFormMixin:
     """Mixin to inject the request in the form."""
@@ -34,7 +38,6 @@ class RequestFormMixin:
         kwargs = super().get_form_kwargs()
         kwargs["request"] = self.request
         return kwargs
-
 
 
 class CustomLoginRequiredMixin(LoginRequiredMixin):
@@ -51,23 +54,118 @@ class CustomLoginRequiredMixin(LoginRequiredMixin):
             return self.handle_no_permission()
         return super(CustomLoginRequiredMixin, self).dispatch(
             request, *args, **kwargs
-    )
-
+        )
 
 
 '''
 Form result2:
 '''
 
-class CompareFormView(CustomLoginRequiredMixin, RequestFormMixin, FormView):
+
+
+
+class TransporterFileFormPartialView(RequestFormMixin, FormView):
+    form_class = TransporterFileForm
+    template_name = 'tool/upload-form.html'
+    success_url = '.'
+
+
+    def form_valid(self, form):
+        user = self.request.user
+        transporter_file = TransporterFile.objects.create(
+            file=form.cleaned_data['file'],
+            transporter=form.cleaned_data['transporter'],
+            user=user
+        )
+        transporter_file_pk = transporter_file.pk
+
+        return super().form_valid(form)
+
+
+
+class TransporterFileFormDetailView(TemplateView):
+    # form_class = TransporterFileForm
+    template_name = 'tool/upload-detail.html'
+
+    def get(self, *args, **kwargs):
+        # Instance of formset
+        transporter_pk = self.kwargs['pk']
+        transporter_file = TransporterFile.objects.get(pk=transporter_pk)
+        return self.render_to_response({'transporter_file': transporter_file})
+
+class TransporterFileFormDeleteView(DeleteView):
+    # form_class = TransporterFileForm
+
+    model = TransporterFile
+    success_url = reverse_lazy('tool:upload')
+
+
+'''
+Comparison view
+'''
+
+class CompareFormView(CustomLoginRequiredMixin, RequestFormMixin, TemplateView):
     """ View to show results of comparison between two files. """
 
     template_name = 'tool/upload.html'
-    form_class = CompareFormTransporterCompany
-    success_url = reverse_lazy('tool:result')
-    permission_denied_message = 'Restricted access!'
+    # success_url = '.'
 
 
+    def post(self, *args, **kwargs):
+
+        form = TransporterFileForm(self.request.POST)
+
+        if form.is_valid():
+            obj = form.save(commit=False)
+            # transporter_file = get_object_or_404(TransporterFile, pk=form.pk)
+            obj.save()
+            transporter_file = TransporterFile.objects.get(pk=obj.pk)
+            transporter_file_pk = transporter_file.pk
+
+            return redirect(reverse_lazy('tool:upload'))
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        user = self.request.user
+        context['files'] = TransporterFile.objects.all()
+
+    #
+    #         d_transporters = {}
+    #
+    #         for form in formset:
+    #             d_form = form.save(commit=False)
+    #             d_form_data = form.cleaned_data
+    #
+    #             # Retrieve all variables
+    #             transporter = d_form_data.get('transporter')
+    #             file = d_form_data.get('file')
+    #             user = self.request.user
+    #             company = user.company
+    #             extension = os.path.splitext(file.name)[1]
+    #             supplement = Supplement.objects.get(company=company, transporter=transporter)
+    #             header_row = supplement.header_row
+    #             columns_to_keep = str(supplement.columns_to_keep)
+    #             print(extension)
+    #
+    #             #Passing values into dictionary
+    #
+    #             extension_list = []
+    #             file_list = []
+    #             header_row_list = []
+    #
+    #             if len(d_transporters) == 0:
+    #                 d_transporters['transporter'] = transporter.name
+    #
+    #             # Send data
+    #             d_form.save()
+    #             transporter_file = get_object_or_404(TransporterFile, pk=d_form.pk)
+    #             print(transporter_file.pk)
+    #
+    #         return redirect(reverse_lazy('tool:upload-detail', kwargs={'pk': transporter_file.pk}))
+    #
+    #
+    #
+    #     return self.render_to_response({'transporter_formset': formset})
 
 
 '''
@@ -75,11 +173,11 @@ TRANSPORTERS:
 View to see the list of transporters affected to one user.
 '''
 
+
 class UserSupplementView(CustomLoginRequiredMixin, TemplateView):
     model = User
     template_name = 'tool/transporters.html'
     permission_denied_message = 'Restricted access!'
-
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -141,8 +239,6 @@ Webpage result:
 class ResultView(LoginRequiredMixin, TemplateView):
     template_name = 'tool/result.html'
 
-
-
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         user = self.request.user
@@ -173,6 +269,7 @@ class ResultView(LoginRequiredMixin, TemplateView):
 
         return context
 
+
 class DownloadView(LoginRequiredMixin, TemplateView):
     template_name = 'tool/download.html'
 
@@ -187,14 +284,14 @@ class DownloadView(LoginRequiredMixin, TemplateView):
             wb = writer.book
             ws = writer.sheets['Rapport']
             format1 = wb.add_format({'bg_color': '#FFC7CE',
-                              'font_color': '#9C0006'})
+                                     'font_color': '#9C0006'})
 
             ws.conditional_format("$A$1:$O$%d" % (number_rows),
-                                         {"type": "formula",
-                                          "criteria": '=INDIRECT("O"&ROW())="No"',
-                                          "format": format1
-                                          }
-                                         )
+                                  {"type": "formula",
+                                   "criteria": '=INDIRECT("O"&ROW())="No"',
+                                   "format": format1
+                                   }
+                                  )
 
             writer.save()
             filename = 'Rapport'
@@ -205,7 +302,6 @@ class DownloadView(LoginRequiredMixin, TemplateView):
 
 
 class UserAddReportView(LoginRequiredMixin, RequestFormMixin, CreateView):
-
     """ View to create a report. """
 
     model = Report
@@ -222,7 +318,6 @@ class UserAddReportView(LoginRequiredMixin, RequestFormMixin, CreateView):
 
 
 class UserReportsView(LoginRequiredMixin, TemplateView):
-
     """ View to access reports """
 
     model = Report
@@ -239,7 +334,6 @@ class UserReportsView(LoginRequiredMixin, TemplateView):
 
 
 class UserViewReport(LoginRequiredMixin, TemplateView):
-
     """ View to access ONE report """
 
     model = Report
@@ -252,7 +346,7 @@ class UserViewReport(LoginRequiredMixin, TemplateView):
         context['report'] = get_object_or_404(Report, slug=slug)
         data = context['report']
         data = data.result
-        #We recover the DF linked to the report
+        # We recover the DF linked to the report
 
         df = pd.read_json(data)
 
@@ -276,7 +370,5 @@ class UserViewReport(LoginRequiredMixin, TemplateView):
 
         df_stats = df['IsSimilar'].value_counts()
         context['data_dict'] = df_stats.to_dict()
-
-
 
         return context

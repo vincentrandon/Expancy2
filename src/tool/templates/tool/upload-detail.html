@@ -1,0 +1,7 @@
+<div>
+    <h3>File title: {{ transporter_file.file }} </h3>
+    <h3>Transporter: {{ transporter_file.transporter }}</h3>
+
+
+    <button hx-post="{% url 'tool:upload-delete' transporter_file.pk %}">Delete</button>
+</div>

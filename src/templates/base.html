@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <title>{% block title %} Expancy {% endblock title %}</title>
       <script src="https://unpkg.com/htmx.org@1.7.0"></script>
+
 </head>
 <nav>
     <ul>
@@ -17,9 +18,15 @@
         {%  endif %}
 </nav>
 <body>
-   {%block scripts%}
-   {%endblock scripts%}
+
     {% block content %}
     {% endblock %}
+    <script>
+        document.body.addEventListener('htmx:configRequest', (event) => {
+            event.detail.headers['X-CSRFToken'] = '{{ csrf_token }}';
+        })
+    </script>
+
+
 </body>
 </html>

@@ -3,12 +3,15 @@ from django.views.generic import TemplateView
 
 from tool.views import UserSupplementView, UserSupplementTransporterView, \
     UserSupplementTransporterEditView, ResultView, CompareFormView, DownloadView, UserAddReportView, UserReportsView, \
-    UserViewReport
+    UserViewReport, TransporterFileFormPartialView, TransporterFileFormDetailView, TransporterFileFormDeleteView
 
 app_name = "tool"
 
 urlpatterns = [
     path('', TemplateView.as_view(template_name="tool/home.html"), name="home"),
+    path('upload-form/', TransporterFileFormPartialView.as_view(), name="upload-form"),
+    path('upload-detail/<int:pk>', TransporterFileFormDetailView.as_view(), name="upload-detail"),
+    path('upload-detail/<int:pk>/delete/', TransporterFileFormDeleteView.as_view(), name="upload-delete"),
     path('transporters/', UserSupplementView.as_view(), name="transporters"),
     path('transporters/<slug:slug>', UserSupplementTransporterView.as_view(), name="tarifs"),
     path('transporters/<slug:slug>/edit', UserSupplementTransporterEditView.as_view(), name="edit-tarifs"),
