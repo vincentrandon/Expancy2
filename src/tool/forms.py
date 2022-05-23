@@ -12,9 +12,9 @@ from django.shortcuts import get_object_or_404
 from django.template.defaultfilters import slugify
 from django_pandas.io import read_frame
 
-from accounts.models import Transporter, Supplement, Weight, WeightPrices, Report
+from accounts.models import Transporter, Supplement, Weight, WeightPrices, Report, Company
 from tool.helpers import parse_excel, parse_csv, parse_xml, validate_file_extension
-from tool.models import TransporterFile
+from tool.models import TransporterFile, CompanyFile
 
 
 class TransporterFileForm(forms.ModelForm):
@@ -23,7 +23,25 @@ class TransporterFileForm(forms.ModelForm):
         fields = ('file', 'transporter')
 
 
-# TransporterFileFormSet = modelformset_factory(TransporterFile, fields=('file', 'transporter'), extra=1)
+TransporterFileFormSet = inlineformset_factory(Company, TransporterFile, form=TransporterFileForm, extra=0, can_delete=True)
+
+class CompanyFileForm(forms.ModelForm):
+    class Meta:
+        model = CompanyFile
+        fields = ('file', )
+
+        def __init__(self, request, *args, **kwargs):
+            super().__init__(*args, **kwargs)
+            self.request = request
+            user = self.request.user
+            self.initial['user'] = user
+            self.initial['company'] = user.company
+
+        def clean(self):
+            super().clean()
+            user = self.request.user
+            file = self.cleaned_data.get('file')
+            print(file)
 
 
 

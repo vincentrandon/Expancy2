@@ -6,7 +6,7 @@ from tool.models import TransporterFile, CompanyFile
 
 class CustomTransporterFileAdmin(admin.ModelAdmin):
 
-    list_display = ['transporter']
+    list_display = ['transporter', 'file',]
     model = TransporterFile
 
 admin.site.register(TransporterFile, CustomTransporterFileAdmin)
