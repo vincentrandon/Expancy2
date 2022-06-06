@@ -33,12 +33,20 @@ ALLOWED_HOSTS = []
 INSTALLED_APPS = [
     'tool',
     'accounts',
+    'reports',
+    'bootstrap_modal_forms',
+    'widget_tweaks',
+    'tailwind', # TailwindCSS
+    'theme', # TailwindCSS Theme
+    'crispy_forms',
+    'crispy_tailwind',
     'django_extensions',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
+    'livereload',
     'django.contrib.staticfiles',
     'nested_inline',
     'nested_admin',
@@ -56,6 +64,7 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'django_htmx.middleware.HtmxMiddleware',
+    'livereload.middleware.LiveReloadScript',
 ]
 
 ROOT_URLCONF = 'config.urls'
@@ -114,6 +123,11 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
+#IPS for refresh
+
+INTERNAL_IPS = [
+    "127.0.0.1",
+]
 
 # Internationalization
 # https://docs.djangoproject.com/en/4.0/topics/i18n/
@@ -133,6 +147,7 @@ USE_TZ = True
 STATIC_URL = 'static/'
 PROJECT_DIR = os.path.dirname(os.path.abspath(__file__))
 STATIC_ROOT = os.path.join(PROJECT_DIR, 'static')
+TAILWIND_APP_NAME = 'theme'
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/4.0/ref/settings/#default-auto-field

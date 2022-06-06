@@ -13,7 +13,7 @@ admin.site.register(TransporterFile, CustomTransporterFileAdmin)
 
 class CustomCompanyFileAdmin(admin.ModelAdmin):
 
-    list_display = ['company']
+    list_display = ['company', 'file', ]
     model = CompanyFile
 
 admin.site.register(CompanyFile, CustomCompanyFileAdmin)

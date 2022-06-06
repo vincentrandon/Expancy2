@@ -1,25 +1,67 @@
 {% extends 'base.html' %}
+{% load crispy_forms_tags %}
+
 {% block scripts %}
 
 {% endblock scripts %}
 
 {% block content %}
+    <div class="px-4 sm:px-6 lg:px-8 mt-11">
+        <div class="sm:flex sm:items-center h-90">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24"
+                 stroke="#68ba9f" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round"
+                      d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/>
+            </svg>
+            <div class="sm:flex-auto">
 
-    <p>Voici un exemple de réponse </p>
-    <p>Sur un total de <b>{{ nb_rows }}</b> commandes, vous avez <b><u>{{ nb_errors }}</u></b> colis qui font l'objet d'une erreur.</p>
-    <ul>
-        <li>Pour cette commande, vous avez payé un total de <div style="font-size:18px;display:inline;color:darkred; font-weight: bold;">{{ total_amount }}€</div></li>
-        <li>Le manque à gagner est de <div style="font-size:18px;display:inline;color:darkgreen; font-weight: bold;">{{ rows_errors_sum }}€</div></li>
+                <h1 class="text-xl font-semibold text-gray-900">Contrôle facturation <span
+                        class="inline-flex items-center px-2.5 py-0.5 rounded-md text-sm font-medium bg-[#68ba9f] text-slate-100">{{ report_title }}</span></p>
+            </div>
+        </div>
+        <br/>
 
-    </ul>
+        <!-- Card -->
+        <div class="grid grid-cols-1">
+            <div class="bg-white overflow-hidden shadow rounded-lg">
+                <div class="p-5">
+                    <div class="flex items-center">
+                        <div class="flex-shrink-0">
+                            <!-- Heroicon name: outline/scale -->
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24"
+                                 stroke="#68ba9f" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round"
+                                      d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
+                            </svg>
+                        </div>
+                        <div class="ml-5 w-0 flex-1">
+                            <dl>
+                                <dt class="text-sm font-medium text-gray-500 truncate">Importer le fichier des
+                                    commandes
+                                </dt>
+                            </dl>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-gray-50 px-5 py-3">
+                    <div class="text-sm">
+                        <a href="#" class="font-medium text-cyan-700 hover:text-cyan-900"> Uploader le fichier </a>
+                    </div>
+                </div>
+            </div>
 
-    <p><a href="{% url 'tool:download' %}">Télécharger le rapport</a></p>
 
-    {% for names, numbers in data_dict.items %}
-        {{ numbers }}
-    {% endfor %}
-
-
-
-
+        </div>
+        <p>
+            Liste des transporteurs pour cette société :
+            {% for supplement in supplements %}
+                <ul>
+                    <li>{{ supplement.transporter }}</li>
+                    <form enctype="multipart/form-data" method="post">
+                        {% csrf_token %}
+                        {{ transporter_form.file.as_widget }}
+                    </form>
+                </ul>
+            {% endfor %}
+        </p>
 {% endblock content %}

@@ -23,6 +23,9 @@ from multiselectfield import MultiSelectField
 ########################################
 
 class User(AbstractBaseUser, PermissionsMixin):
+
+    """ Class designed to create users. """
+
     username = models.CharField('username', max_length=30, blank=True)
     email = models.EmailField('Adresse mail', unique=True)
     first_name = models.CharField('Prénom', max_length=30, blank=True)
@@ -32,6 +35,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     is_active = models.BooleanField('active', default=True)
     is_staff = models.BooleanField('staff status', default=False)
     is_superuser = models.BooleanField(default=False)
+
 
     objects = UserManager()
 
@@ -67,6 +71,9 @@ class User(AbstractBaseUser, PermissionsMixin):
 ################################
 
 class Transporter(models.Model):
+
+    """ Class designed to create a transporter. """
+
     name = models.CharField(max_length=100)
     avatar = models.ImageField(blank=True, null=True)
 
@@ -90,6 +97,9 @@ class Transporter(models.Model):
 ########################################
 
 class Company(models.Model):
+
+    """ Class designed to create a company. """
+
     name = models.CharField(max_length=200, blank=False)
     transporters = models.ManyToManyField(Transporter, blank=True)
 
@@ -117,6 +127,10 @@ class Brand(models.Model):
 
 
 class Supplement(models.Model):
+
+    """ Class designed to implement a "Supplement" for a company and a transporter.
+    Supplements (extra-fees) are necessary to recalculate deliveries. """
+
 
     PROFILE_CHOICES_CHRONOPOST = [
         (1, 'No Facture'),
@@ -149,7 +163,6 @@ class Supplement(models.Model):
     transporter = models.ForeignKey(Transporter, on_delete=DO_NOTHING, blank=True, null=True)
     company = models.ForeignKey(Company, on_delete=DO_NOTHING, blank=True, null=True)
     brand = models.ForeignKey(Brand, on_delete=DO_NOTHING, blank=True, null=True)
-    header_row = models.IntegerField(blank=True, null=True)
     supplement_annonce_incomplete = models.DecimalField('Supplément annonce incomplète', max_digits=7, decimal_places=3,
                                                         blank=True, null=True)
     supplement_retour_expediteur = models.DecimalField('Supplément Retour Expéditeur', max_digits=7, decimal_places=3,
@@ -178,7 +191,6 @@ class Supplement(models.Model):
     supplement_taxe_carbone = models.DecimalField('Supplément taxe carbone', max_digits=7, decimal_places=3, blank=True,
                                                   null=True)
     slug = models.SlugField(max_length=255, unique=True, blank=True)
-    columns_to_keep = MultiSelectField(choices=PROFILE_CHOICES_CHRONOPOST, blank=True, null=True)
 
 
     #Titre de la page
@@ -191,11 +203,6 @@ class Supplement(models.Model):
     #URL du supplément créé
     def get_absolute_url(self):
         return reverse("transporter-detail", kwargs={"slug": self.slug})
-
-    # def __init__(self, *args, **kwargs):
-    #     super().__init__(*args, **kwargs)
-    #     if self:
-    #         print(self.columns_to_keep)
 
     def save(self, *args, **kwargs):
         if not self.slug:
@@ -220,10 +227,35 @@ class Supplement(models.Model):
         verbose_name_plural = "Suppléments"
 
 
+class SupplementDetails(models.Model):
+
+    """ Class designed to complete the "Supplement" class.
+     This class is used to select variables in order to proceed to the comparison. """
+
+    supplement = models.ForeignKey(Supplement, on_delete=models.CASCADE, blank=False)
+    header_row = models.IntegerField(blank=True, null=True)
+    columns_to_keep = JSONField(blank=True, null=True)
+    column_price = JSONField(blank=True, null=True)
+    column_package_number = JSONField(blank=True, null=True)
+    column_prestation_type = JSONField(blank=True, null=True)
+    column_weight = JSONField(blank=True, null=True)
+    columns_supplements = JSONField(blank=True, null=True)
+
+
+    class Meta:
+        verbose_name = "Supplément - Detail per company"
+        verbose_name_plural = "Suppléments - Details per company"
+
+
 class Weight(models.Model):
+
+    """ Class designed to store weights per company AND transporter. """
+
     transporter = models.ForeignKey(Transporter, on_delete=DO_NOTHING, blank=True, null=True)
     company = models.ForeignKey(Company, on_delete=DO_NOTHING, blank=True, null=True)
     brand = models.ForeignKey(Brand, on_delete=DO_NOTHING, blank=True, null=True)
+    columns_to_keep = JSONField(blank=True, null=True)
+
 
 
     def __str__(self):
@@ -238,6 +270,9 @@ class Weight(models.Model):
         verbose_name_plural = "Weights"
 
 class WeightPrices(models.Model):
+
+    """ Class designed to store list of weights and their prices. """
+
     weight = models.ForeignKey(Weight, on_delete=DO_NOTHING, blank=False, null=True)
     min_weight = models.FloatField('Min weight', blank=False, null=True)
     max_weight = models.FloatField('Max weight', blank=False, null=True)
@@ -248,20 +283,6 @@ class WeightPrices(models.Model):
         verbose_name_plural = "Weight Prices"
 
 
-class Report(models.Model):
-    title = models.CharField(max_length=200, null=True, blank=True)
-    company = models.ForeignKey(Company, on_delete=models.CASCADE, blank=True, null=True)
-    brand = models.ForeignKey(Brand, on_delete=models.CASCADE, blank=True, null=True)
-    result = JSONField(null=True, blank=True)
-    slug = models.SlugField(max_length=255, blank=True)
 
-    def __str__(self):
-        return self.title
-
-
-
-    class Meta:
-        verbose_name = "Report"
-        verbose_name_plural = "Reports"
 
 

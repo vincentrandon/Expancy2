@@ -2,6 +2,7 @@
 
 {% block content %}
     <p>Voici un exemple de réponse </p>
+    <p>Vous trouverez le détail par transporteur ci-dessous. </p>
 {#    <p>Sur un total de <b>{{ nb_rows }}</b> commandes, vous avez <b><u>{{ nb_errors }}</u></b> colis qui font l'objet d'une erreur.</p>#}
 {#    <ul>#}
 {#        <li>Pour cette commande, vous avez payé un total de <div style="font-size:18px;display:inline;color:darkred; font-weight: bold;">{{ total_amount }}€</div></li>#}
@@ -11,6 +12,18 @@
 {##}
 {#    <p><a href="{% url 'tool:download' %}">Télécharger le rapport</a></p>#}
 
+<ul>
+    {% for key, value in dict_errors.items %}
+        <li>{{ key }}</li>
+            <ul>
+                <li> Le montant de la commande totale est de <div style="font-size:18px;display:inline;color:darkred; font-weight: bold;">{{ value.total_amount }}€</div>.</li>
+                <li> {{ value.nb_errors }} erreurs ont été relevées. </li>
+                <li> Le manque à gagner est de <div style="font-size:18px;display:inline;color:darkgreen; font-weight: bold;">{{ value.rows_errors_sum }}€</div> pour cette commande.</li>
+                <li><a href="{% url 'tool:download' slug=value.slug %}">Télécharger le rapport</a></li>
+
+            </ul>
+    {% endfor %}
+</ul>
 
 
 {% endblock content %}

@@ -7,7 +7,8 @@ from import_export.admin import ImportMixin, ImportExportModelAdmin
 from nested_admin.nested import NestedStackedInline, NestedModelAdmin, NestedTabularInline
 
 from accounts.forms import CustomImportForm, CustomConfirmImportForm
-from accounts.models import Transporter, User, Supplement, Company, Brand, Weight, WeightPrices, Report
+from accounts.models import Transporter, User, Supplement, Company, Brand, Weight, WeightPrices, \
+    SupplementDetails
 
 
 class CustomTransporterAdmin(admin.ModelAdmin):
@@ -54,20 +55,25 @@ class CustomSupplementAdmin(ImportExportModelAdmin, admin.ModelAdmin):
     def get_confirm_import_form(self):
         return CustomConfirmImportForm
 
-    # def get_form_kwargs(self, form, *args, **kwargs):
-    #     # pass on `author` to the kwargs for the custom confirm form
-    #     if isinstance(form, CustomImportForm):
-    #         if form.is_valid():
-    #             Supplement = form.cleaned_data['Supplement']
-    #             kwargs.update({'Supplement': Supplement.id})
-    #     return kwargs
-
-
 admin.site.register(Supplement, CustomSupplementAdmin)
 
 
+''' SUPPLEMENTS -> DETAILS '''
+
+class CustomSupplementDetailsAdmin(ImportExportModelAdmin, admin.ModelAdmin):
+
+    list_display = ['supplement']
+    list_filter = ['supplement']
+    model = SupplementDetails
+
+    def get_import_form(self):
+        return CustomImportForm
+
+    def get_confirm_import_form(self):
+        return CustomImportForm
 
 
+admin.site.register(SupplementDetails, CustomSupplementDetailsAdmin)
 
 
 ''' BRANDS '''
@@ -97,11 +103,3 @@ class CustomWeightAdmin(NestedModelAdmin):
 admin.site.register(Weight, CustomWeightAdmin)
 
 
-''' REPORT '''
-class CustomReportAdmin(admin.ModelAdmin):
-
-    list_display = ['title', 'company']
-    list_filter = ['company']
-    model = Report
-
-admin.site.register(Report, CustomReportAdmin)

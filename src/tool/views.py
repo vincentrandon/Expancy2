@@ -8,7 +8,7 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core.exceptions import ValidationError
-from django.http import HttpResponse, JsonResponse
+from django.http import HttpResponse, JsonResponse, Http404
 from django.shortcuts import render, get_object_or_404, redirect
 from pprint import pprint
 
@@ -21,11 +21,12 @@ from django.views import View
 from django.views.generic import TemplateView, CreateView, FormView, DetailView, ListView, UpdateView, DeleteView
 from django_pandas.io import read_frame
 
-from accounts.models import User, Supplement, Weight, WeightPrices, Report, Company
-from tool.forms import ReportForm, TransporterFileForm, TransporterFileFormSet, CompanyFileForm
+from accounts.models import User, Supplement, Weight, WeightPrices, Company, Transporter, SupplementDetails
+from reports.models import Report, ReportDetails
+from tool.forms import TransporterFileForm, CompanyFileForm
 import json
 
-from tool.helpers import parse_data
+from tool.helpers import get_header_row, parse_file, analyze, store_results
 from tool.models import TransporterFile, CompanyFile
 
 pd.set_option('display.width', 400)
@@ -58,7 +59,6 @@ class CustomLoginRequiredMixin(LoginRequiredMixin):
         )
 
 
-
 '''
 TRANSPORTERS:
 View to see the list of transporters affected to one user.
@@ -66,7 +66,6 @@ View to see the list of transporters affected to one user.
 
 
 class UserSupplementView(CustomLoginRequiredMixin, TemplateView):
-
     """ View to see transporters """
 
     model = User
@@ -106,7 +105,6 @@ View to edit pricings of transporter.
 
 
 class UserSupplementTransporterEditView(LoginRequiredMixin, UpdateView):
-
     """ View to edit supplements """
 
     model = Supplement
@@ -128,63 +126,200 @@ class UserSupplementTransporterEditView(LoginRequiredMixin, UpdateView):
         return reverse('tool:tarifs', kwargs={'slug': self.object.slug})
 
 
+class UploadView(RequestFormMixin, TemplateView):
+    template_name = 'tool/upload.html'
+
+    # def get_context_data(self, **kwargs):
+    #     context = super().get_context_data(**kwargs)
+    #     context['formset'] = TransporterFileFormSet(queryset=TransporterFile.objects.none())
+    #     context['files'] = TransporterFile.objects.all()
+    #
+    #     ''' Even if user is logged in, cannot access directly the URL. Have to use the form. '''
+    #     # if reverse('tool:add-report') not in self.request.META.get('HTTP_REFERER'):
+    #     #     raise Http404
+    #
+    #     return context
+    #
+    # def post(self, request, *args, **kwargs):
+    #
+    #     user = self.request.user
+    #     company = get_object_or_404(Company, pk=user.company.pk)
+    #     formset = TransporterFileFormSet(data=request.POST or None, files=request.FILES, instance=company)
+
+        # if formset.is_valid():
+        #
+        #     dict_files = {}
+        #     files_list = []
+        #     transporter_list = []
+        #     pk_list = []
+        #
+        #     for form in formset:
+        #         obj = form.save(commit=False)
+        #         cd = form.cleaned_data
+        #         file = cd.get('file')
+        #         transporter = cd.get('transporter')
+        #         print(transporter)
+        #         form.save()
+        #         transporter_file = TransporterFile.objects.get(pk=obj.pk)
+        #         n_transporter_file = TransporterFile.objects.filter(pk=obj.pk).update(name=transporter_file.file.name)
+        #         n_transporter_file = TransporterFile.objects.filter(pk=obj.pk).update(user=user)
+        #         pk_list.append(obj.pk)
+        #         files_list.append(transporter_file.file.name)
+        #         transporter_list.append(transporter.name)
+        #         print(transporter_list)
+        #         dict_files['pk'] = pk_list
+        #         dict_files['files'] = files_list
+        #         dict_files['transporter'] = transporter_list
+        #         request.session['dict_files'] = dict_files
+        #
+        #     return redirect('tool:upload-company-file')
+        #
+        #
+        #
+        # else:
+        #     raise ValidationError('You cannot submit empty form.')
+        #
+        # return self.render_to_response({'formset': formset})
+
+
+class UploadCompanyFileView(LoginRequiredMixin, CreateView):
+    model = CompanyFile
+    template_name = 'tool/upload-company-file.html'
+    form_class = CompanyFileForm
+    success_url = reverse_lazy('tool:result')
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['dict_files'] = self.request.session['dict_files']
+        print(context['dict_files'])
+        return context
+
+    def form_valid(self, form):
+        self.object = form.save()
+        user = self.request.user
+        self.object.user = user
+        self.object.company = user.company
+        self.object.name = self.object.file.name
+        # self.request.session['report_id'] = self.object.pk
+        # if not self.object.slug:
+        #     self.object.slug = slugify(str(self.object.company) + "-" + get_random_string(length=32))
+        self.request.session['company_file_pk'] = self.object.pk
+        return super().form_valid(form)
+
+
 '''
 Webpage result:
 '''
 
 
 class ResultView(LoginRequiredMixin, TemplateView):
-
     """ View to access results from comparison """
 
     template_name = 'tool/result.html'
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+
+        #Preparing empty data
+        transporters_profile_list = []
+        transporters_list = []
+        dict_errors = {}
+
+        ''' TRANSPORTERS '''
+        transporters_profile = Supplement.objects.filter(company=self.request.user.company).values_list(
+            'transporter__name', flat=True)
+        for profile in transporters_profile:
+            transporters_profile_list.append(profile)
+
+
+
+        ''' FILES '''
+        # Company file
         context['company_file_pk'] = self.request.session['company_file_pk']
-        print(context['company_file_pk'])
+        company_file = get_object_or_404(CompanyFile, pk=context['company_file_pk'])
+        company_file = company_file.file
+
+        # File list
         dict_files = self.request.session['dict_files']
-        print(dict_files)
-        user = self.request.user
-        context['result'] = self.request.session['result']
-        result = context['result']
 
-        # Transformation into DF
-        df = pd.DataFrame(result)
-        # pprint(df)
+        for i in range(len(dict_files.get('pk'))):
+            # Get variables and names
+            pk = dict_files.get('pk')[i]
 
-        # Count number of rows
-        nb_rows = df[df.columns[0]].count()
-        context['nb_rows'] = nb_rows
+            #Handling transporters. If transporter is in list, then outputs result.
+            transporter = dict_files.get('transporter')[i]
+            transporters_list.append(transporter)
+            transporter = Transporter.objects.get(name=transporter)
 
-        # Count number of rows which are errored
-        nb_errors = np.sum(df['IsSimilar'] == 'No')
-        context['nb_errors'] = nb_errors
+            #Managing header_row
+            header_row = get_header_row(company=self.request.user.company, transporter=transporter)
 
-        # Sum all rows
-        total_amount = df['Montant_HT'].sum()
-        context['total_amount'] = total_amount
+            #Get actual transporter file
+            transporter_file = TransporterFile.objects.get(pk=pk)
+            transporter_file = transporter_file.file
+            extension = os.path.splitext(transporter_file.name)[1]
 
-        # Sum all rows which are errored
-        rows_errors_sum = df.loc[df['IsSimilar'] == 'No', ['Result']].sum().values
-        rows_errors_sum = str(rows_errors_sum).replace('[', '').replace(']', '')
-        rows_errors_sum = float(rows_errors_sum)
-        context['rows_errors_sum'] = rows_errors_sum
+            ''' Analysis '''
+            'To make analysis, function analyze() needs to be called.' \
+            'The function needs to be called with the company file, transporter file, the transporter and the company.'
+
+            df = analyze(transporter_file=transporter_file,
+                            company_file=company_file,
+                            transporter=transporter,
+                            company=self.request.user.company)
+
+
+
+            context['transporters'] = transporters_list
+
+            ''' Preparing new DF with errors and sums. '''
+            df = pd.DataFrame(df)
+            print(self.request.session['report_id'])
+            report_details_pk = store_results(pk=self.request.session['report_id'], data=df.to_dict(), transporter=transporter)
+            slug = ReportDetails.objects.get(pk=report_details_pk).slug
+
+            #Calculating number of errors
+            nb_errors = np.sum(df['IsSimilar'] == 'No')
+            context['nb_errors'] = nb_errors
+            #Calculating sum of all orders
+            total_amount = df['Montant_HT'].sum()
+            total_amount = round(total_amount)
+            context['total_amount'] = total_amount
+            # Sum all rows which are errored
+            rows_errors_sum = df.loc[df['IsSimilar'] == 'No', ['Result']].sum().values
+            rows_errors_sum = str(rows_errors_sum).replace('[', '').replace(']', '')
+            rows_errors_sum = float(rows_errors_sum)
+            context['rows_errors_sum'] = rows_errors_sum
+
+
+            ''' Storing errors in dict_errors '''
+            dict_errors[transporter.name] = {
+                'nb_errors': nb_errors,
+                'total_amount': total_amount,
+                'rows_errors_sum': rows_errors_sum,
+                'slug': slug
+            }
+
+            context['dict_errors'] = dict_errors
+            self.request.session['report_detail_pk'] = report_details_pk
+
+
 
         return context
 
 
 class DownloadView(LoginRequiredMixin, TemplateView):
-
     """ View to download results in XLSX format. """
-
-
+    model = ReportDetails
     template_name = 'tool/download.html'
 
     def get(self, request, *args, **kwargs):
-        content = self.request.session['result']
-        df = pd.DataFrame(content)
+        slug = self.kwargs['slug']
+        report_details = ReportDetails.objects.get(slug=slug)
+        data = json.loads(report_details.data)
+        df = pd.DataFrame(data)
 
+        # Create a Pandas Excel writer using XlsxWriter as the engine.
         with BytesIO() as b:
             writer = pd.ExcelWriter(b, engine='xlsxwriter')
             df.to_excel(writer, sheet_name='Rapport', index=False)
@@ -206,246 +341,6 @@ class DownloadView(LoginRequiredMixin, TemplateView):
             content_type = 'application/vnd.ms-excel'
             response = HttpResponse(b.getvalue(), content_type=content_type)
             response['Content-Disposition'] = 'attachment; filename="' + filename + '.xlsx"'
+
             return response
-
-
-class UserAddReportView(LoginRequiredMixin, RequestFormMixin, CreateView):
-
-    """ View to create a report. """
-
-    model = Report
-    template_name = 'tool/add-report.html'
-    form_class = ReportForm
-    success_url = reverse_lazy('tool:upload')
-
-    def form_valid(self, form):
-        self.object = form.save()
-        self.request.session['report_id'] = self.object.pk
-        if not self.object.slug:
-            self.object.slug = slugify(str(self.object.company) + "-" + get_random_string(length=32))
-        return super().form_valid(form)
-
-
-class UserReportsView(LoginRequiredMixin, TemplateView):
-    """ View to access reports """
-
-    model = Report
-    template_name = 'tool/reports.html'
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        user = self.request.user
-        context['reports'] = Report.objects.filter(company=user.company)
-        # slug = self.kwargs['slug']
-        # context['report'] = get_object_or_404(Report, slug=slug)
-
-        return context
-
-
-class UserViewReport(LoginRequiredMixin, TemplateView):
-    """ View to access ONE report """
-
-    model = Report
-    template_name = 'tool/single-report.html'
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        # context['result'] = self.request.session['result']
-        slug = self.kwargs['slug']
-        context['report'] = get_object_or_404(Report, slug=slug)
-        data = context['report']
-        data = data.result
-        # We recover the DF linked to the report
-
-        df = pd.read_json(data)
-
-        # Count number of rows
-        nb_rows = df[df.columns[0]].count()
-        context['nb_rows'] = nb_rows
-
-        # Count number of rows which are errored
-        nb_errors = np.sum(df['IsSimilar'] == 'No')
-        context['nb_errors'] = nb_errors
-
-        # Sum all rows
-        total_amount = df['Montant_HT'].sum()
-        context['total_amount'] = total_amount
-
-        # Sum all rows which are errored
-        rows_errors_sum = df.loc[df['IsSimilar'] == 'No', ['Result']].sum().values
-        rows_errors_sum = str(rows_errors_sum).replace('[', '').replace(']', '')
-        rows_errors_sum = float(rows_errors_sum)
-        context['rows_errors_sum'] = rows_errors_sum
-
-        df_stats = df['IsSimilar'].value_counts()
-        context['data_dict'] = df_stats.to_dict()
-
-        return context
-
-
-class TransporterFileFormPartialView(FormView):
-    form_class = TransporterFileForm
-    template_name = 'tool/upload-form.html'
-    success_url = '.'
-
-
-    def form_valid(self, form):
-        user = self.request.user
-        report_id = self.request.session['report_id']
-        print(report_id)
-        transporter_file = TransporterFile.objects.create(
-            file=form.cleaned_data['file'],
-            transporter=form.cleaned_data['transporter'],
-            user=user,
-        )
-
-        transporter_file_pk = transporter_file.pk
-
-        return super().form_valid(form)
-
-
-
-class UploadView(RequestFormMixin, TemplateView):
-
-    template_name = 'tool/upload.html'
-
-    def get_context_data(self, **kwargs):
-        print(self.request.META.get('HTTP_REFERER'))
-        context = super().get_context_data(**kwargs)
-        context['formset'] = TransporterFileFormSet(queryset=TransporterFile.objects.none())
-        context['files'] = TransporterFile.objects.all()
-
-        return context
-
-
-    def post(self, request, *args, **kwargs):
-
-        user = self.request.user
-        company = get_object_or_404(Company, pk=user.company.pk)
-        formset = TransporterFileFormSet(data=request.POST or None, files=request.FILES, instance=company)
-
-        if formset.is_valid():
-
-            dict_files = {}
-            files_list = []
-            pk_list = []
-
-            for form in formset:
-                obj = form.save(commit=False)
-                cd = form.cleaned_data
-                file = cd.get('file')
-                form.save()
-                transporter_file = TransporterFile.objects.get(pk=obj.pk)
-                n_transporter_file = TransporterFile.objects.filter(pk=obj.pk).update(name=transporter_file.file.name)
-                n_transporter_file = TransporterFile.objects.filter(pk=obj.pk).update(user=user)
-                pk_list.append(obj.pk)
-                files_list.append(transporter_file.file.name)
-                dict_files['pk'] = pk_list
-                dict_files['files'] = files_list
-                request.session['dict_files'] = dict_files
-
-
-            return redirect('tool:upload-company-file')
-
-
-
-        else:
-            raise ValidationError('You cannot submit empty form.')
-
-
-        return self.render_to_response({'formset': formset})
-
-
-
-class UploadCompanyFileView(LoginRequiredMixin, CreateView):
-    model = CompanyFile
-    template_name = 'tool/upload-company-file.html'
-    form_class = CompanyFileForm
-    success_url = reverse_lazy('tool:result')
-
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context['dict_files'] = self.request.session['dict_files']
-        print(context['dict_files'])
-        return context
-
-    def form_valid(self, form):
-        self.object = form.save()
-        user = self.request.user
-        self.object.user = user
-        self.object.company = user.company
-        self.object.name = self.object.file.name
-        # self.request.session['report_id'] = self.object.pk
-        # if not self.object.slug:
-        #     self.object.slug = slugify(str(self.object.company) + "-" + get_random_string(length=32))
-        self.request.session['company_file_pk'] = self.object.pk
-        return super().form_valid(form)
-
-
-
-
-
-
-
-# class CompareFormView(CustomLoginRequiredMixin, RequestFormMixin, TemplateView):
-#     """ View to show results of comparison between two files. """
-#
-#     template_name = 'tool/upload.html'
-#     # success_url = '.'
-#
-#
-#     def post(self, *args, **kwargs):
-#
-#
-#
-#         if formset.is_valid():
-#             obj = formset.save(commit=False)
-#             # transporter_file = get_object_or_404(TransporterFile, pk=form.pk)
-#             obj.save()
-#             transporter_file = TransporterFile.objects.get(pk=obj.pk)
-#             transporter_file_pk = transporter_file.pk
-#             update_transporter_file = TransporterFile.objects.filter(pk=obj.pk).update(user=self.request.user)
-#             # report_id = self.request.session['report_id']
-#             # update_transporter_report_id = TransporterFile.objects.filter(pk=obj.pk).update(report=report_id)
-#
-#             return redirect(reverse_lazy('tool:upload'))
-
-    #
-    #         d_transporters = {}
-    #
-    #         for form in formset:
-    #             d_form = form.save(commit=False)
-    #             d_form_data = form.cleaned_data
-    #
-    #             # Retrieve all variables
-    #             transporter = d_form_data.get('transporter')
-    #             file = d_form_data.get('file')
-    #             user = self.request.user
-    #             company = user.company
-    #             extension = os.path.splitext(file.name)[1]
-    #             supplement = Supplement.objects.get(company=company, transporter=transporter)
-    #             header_row = supplement.header_row
-    #             columns_to_keep = str(supplement.columns_to_keep)
-    #             print(extension)
-    #
-    #             #Passing values into dictionary
-    #
-    #             extension_list = []
-    #             file_list = []
-    #             header_row_list = []
-    #
-    #             if len(d_transporters) == 0:
-    #                 d_transporters['transporter'] = transporter.name
-    #
-    #             # Send data
-    #             d_form.save()
-    #             transporter_file = get_object_or_404(TransporterFile, pk=d_form.pk)
-    #             print(transporter_file.pk)
-    #
-    #         return redirect(reverse_lazy('tool:upload-detail', kwargs={'pk': transporter_file.pk}))
-    #
-    #
-    #
-    #     return self.render_to_response({'transporter_formset': formset})
 

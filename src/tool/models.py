@@ -1,7 +1,8 @@
 from django.db import models
 
 # Create your models here.
-from accounts.models import Transporter, Company, User, Report
+from accounts.models import Transporter, Company, User
+from reports.models import Report
 from tool.helpers import validate_file_extension
 
 PROFILE_CHOICES = [
@@ -14,6 +15,9 @@ class CompanyFile(models.Model):
     file = models.FileField('Insertion fichier des commandes', null=True, blank=True)
     company = models.ForeignKey(Company, on_delete=models.CASCADE, blank=True, null=True)
     user = models.ForeignKey(User, on_delete=models.CASCADE, blank=True, null=True)
+    header_row = models.IntegerField(default=0, null=True, blank=True)
+    report = models.ForeignKey(Report, on_delete=models.CASCADE, blank=True, null=True)
+
 
     def __str__(self):
         return str(self.name)
